@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>HIIT Run</title>
+<style>
+  /* ─── CONFIG ──────────────────────────────────────────────── */
+  /* Cambia estos valores para ajustar los tiempos */
+  /* Sprint y Rest se definen en el JS (ver arriba del script) */
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --sprint-color: #FF3B30;
+    --sprint-glow: rgba(255, 59, 48, 0.25);
+    --rest-color: #30D158;
+    --rest-glow: rgba(48, 209, 88, 0.25);
+    --neutral-color: #0A84FF;
+    --neutral-glow: rgba(10, 132, 255, 0.20);
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --border: rgba(255,255,255,0.08);
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255,255,255,0.45);
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+  }
+
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: 2rem 1.5rem;
+    position: relative;
+  }
+
+  /* ─── AMBIENT GLOW ───────────────────────────────────────── */
+  #ambient {
+    position: fixed;
+    top: -30%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: var(--neutral-glow);
+    filter: blur(80px);
+    transition: background 0.8s ease;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── MAIN LAYOUT ────────────────────────────────────────── */
+  #app {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  /* ─── HEADER ─────────────────────────────────────────────── */
+  #header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 3rem;
+  }
+
+  .brand {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  #rounds-badge {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    transition: all 0.4s ease;
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  #rounds-badge.visible {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  #rounds-badge span {
+    color: var(--neutral-color);
+    font-weight: 600;
+    transition: color 0.5s ease;
+  }
+
+  /* ─── PHASE LABEL ────────────────────────────────────────── */
+  #phase-wrap {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+
+  #phase-label {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--neutral-color);
+    transition: color 0.5s ease, opacity 0.4s ease;
+    opacity: 0;
+  }
+
+  #phase-label.visible { opacity: 1; }
+
+  /* ─── RING + TIMER ───────────────────────────────────────── */
+  #ring-wrap {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2.5rem;
+  }
+
+  #ring-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  #ring-bg {
+    fill: none;
+    stroke: var(--surface);
+    stroke-width: 3;
+  }
+
+  #ring-progress {
+    fill: none;
+    stroke: var(--neutral-color);
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear, stroke 0.5s ease;
+  }
+
+  #timer-display {
+    font-size: 72px;
+    font-weight: 200;
+    letter-spacing: -0.03em;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    transition: transform 0.15s ease;
+    user-select: none;
+    line-height: 1;
+  }
+
+  #timer-display.tick {
+    transform: scale(1.04);
+  }
+
+  /* ─── PHASE DESCRIPTION ──────────────────────────────────── */
+  #phase-desc {
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+    height: 24px;
+    transition: opacity 0.4s ease;
+    opacity: 0;
+    margin-bottom: 3rem;
+    text-align: center;
+  }
+
+  #phase-desc.visible { opacity: 1; }
+
+  /* ─── INTERVALS DISPLAY ──────────────────────────────────── */
+  #intervals {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 3rem;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  #intervals.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .interval-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 20px;
+    min-width: 100px;
+  }
+
+  .chip-val {
+    font-size: 20px;
+    font-weight: 300;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+  }
+
+  .chip-lbl {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  /* ─── START / STOP BUTTON ────────────────────────────────── */
+  #main-btn {
+    width: 100%;
+    max-width: 320px;
+    height: 72px;
+    border-radius: 20px;
+    border: none;
+    font-family: var(--font);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.4s ease, color 0.4s ease;
+    outline: none;
+    position: relative;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    background: rgba(255,255,255,0.95);
+    color: #0a0a0a;
+  }
+
+  #main-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0);
+    transition: background 0.15s ease;
+    border-radius: inherit;
+  }
+
+  #main-btn:active {
+    transform: scale(0.96);
+  }
+
+  #main-btn:active::after {
+    background: rgba(0,0,0,0.08);
+  }
+
+  #main-btn.running {
+    background: var(--surface);
+    color: rgba(255,255,255,0.6);
+    border: 1px solid var(--border);
+  }
+
+  /* ─── TRANSITION FLASH ───────────────────────────────────── */
+  #flash {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 10;
+  }
+
+  #flash.animate {
+    animation: flashAnim 0.4s ease-out forwards;
+  }
+
+  @keyframes flashAnim {
+    0%   { opacity: 0.18; }
+    100% { opacity: 0; }
+  }
+
+  /* ─── PULSE ANIMATION ────────────────────────────────────── */
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.015); }
+  }
+
+  #ring-wrap.sprinting {
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+</style>
+</head>
+<body>
+
+<div id="ambient"></div>
+<div id="flash"></div>
+
+<div id="app">
+
+  <div id="header">
+    <div class="brand">HIIT Run</div>
+    <div id="rounds-badge">Ronda <span id="round-num">1</span></div>
+  </div>
+
+  <div id="phase-wrap">
+    <div id="phase-label">SPRINT</div>
+  </div>
+
+  <div id="ring-wrap">
+    <svg id="ring-svg" viewBox="0 0 260 260">
+      <circle id="ring-bg" cx="130" cy="130" r="122"/>
+      <circle id="ring-progress" cx="130" cy="130" r="122"/>
+    </svg>
+    <div id="timer-display">0:30</div>
+  </div>
+
+  <div id="phase-desc">Prepárate para correr</div>
+
+  <div id="intervals">
+    <div class="interval-chip">
+      <div class="chip-val" id="chip-sprint">30s</div>
+      <div class="chip-lbl">Sprint</div>
+    </div>
+    <div class="interval-chip">
+      <div class="chip-val" id="chip-rest">60s</div>
+      <div class="chip-lbl">Descanso</div>
+    </div>
+  </div>
+
+  <button id="main-btn">START</button>
+
+</div>
+
+<script>
+  /* ════════════════════════════════════════════════════════════
+     CONFIGURACIÓN — Cambia estos valores para ajustar tiempos
+     ════════════════════════════════════════════════════════════ */
+  const CONFIG = {
+    SPRINT_SECONDS: 30,
+    REST_SECONDS:   60,
+  };
+  /* ════════════════════════════════════════════════════════════ */
+
+  const CIRCUMFERENCE = 2 * Math.PI * 122;
+
+  const el = {
+    ambient:    document.getElementById('ambient'),
+    flash:      document.getElementById('flash'),
+    phaseLabel: document.getElementById('phase-label'),
+    phaseDesc:  document.getElementById('phase-desc'),
+    ringWrap:   document.getElementById('ring-wrap'),
+    ringProg:   document.getElementById('ring-progress'),
+    timer:      document.getElementById('timer-display'),
+    btn:        document.getElementById('main-btn'),
+    roundsBadge:document.getElementById('rounds-badge'),
+    roundNum:   document.getElementById('round-num'),
+    intervals:  document.getElementById('intervals'),
+    chipSprint: document.getElementById('chip-sprint'),
+    chipRest:   document.getElementById('chip-rest'),
+  };
+
+  const COLORS = {
+    sprint: {
+      accent: '#FF3B30',
+      glow:   'rgba(255, 59, 48, 0.22)',
+      label:  'SPRINT',
+      desc:   '¡Corre al máximo!',
+    },
+    rest: {
+      accent: '#30D158',
+      glow:   'rgba(48, 209, 88, 0.20)',
+      label:  'DESCANSO',
+      desc:   'Respira, camina despacio.',
+    },
+    idle: {
+      accent: '#0A84FF',
+      glow:   'rgba(10, 132, 255, 0.18)',
+    }
+  };
+
+  let running    = false;
+  let phase      = 'sprint';   // 'sprint' | 'rest'
+  let timeLeft   = CONFIG.SPRINT_SECONDS;
+  let totalTime  = CONFIG.SPRINT_SECONDS;
+  let rounds     = 0;
+  let interval   = null;
+  let audioCtx   = null;
+
+  function fmt(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return m + ':' + String(sec).padStart(2, '0');
+  }
+
+  function updateRing() {
+    const frac = timeLeft / totalTime;
+    const offset = CIRCUMFERENCE * (1 - frac);
+    el.ringProg.style.strokeDasharray = CIRCUMFERENCE;
+    el.ringProg.style.strokeDashoffset = offset;
+  }
+
+  function setColors(mode) {
+    const c = COLORS[mode];
+    document.documentElement.style.setProperty('--neutral-color', c.accent);
+    el.ambient.style.background = c.glow;
+    el.ringProg.style.stroke = c.accent;
+    el.roundsBadge.querySelector('span').style.color = c.accent;
+  }
+
+  function flashScreen(color) {
+    el.flash.style.background = color;
+    el.flash.classList.remove('animate');
+    void el.flash.offsetWidth;
+    el.flash.classList.add('animate');
+  }
+
+  function playBeep(type) {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      if (type === 'sprint') {
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(660, audioCtx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.18);
+      } else {
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(330, audioCtx.currentTime + 0.18);
+        gain.gain.setValueAtTime(0.14, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.22);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.22);
+      }
+    } catch(e) {}
+  }
+
+  function tick() {
+    timeLeft--;
+
+    el.timer.classList.remove('tick');
+    void el.timer.offsetWidth;
+    el.timer.classList.add('tick');
+    el.timer.textContent = fmt(timeLeft);
+    updateRing();
+
+    if (timeLeft <= 0) switchPhase();
+  }
+
+  function switchPhase() {
+    if (phase === 'sprint') {
+      phase = 'rest';
+      timeLeft = totalTime = CONFIG.REST_SECONDS;
+      setColors('rest');
+      el.phaseLabel.textContent = COLORS.rest.label;
+      el.phaseDesc.textContent  = COLORS.rest.desc;
+      el.ringWrap.classList.remove('sprinting');
+      flashScreen('rgba(48, 209, 88, 0.15)');
+      playBeep('rest');
+    } else {
+      rounds++;
+      el.roundNum.textContent = rounds + 1;
+      phase = 'sprint';
+      timeLeft = totalTime = CONFIG.SPRINT_SECONDS;
+      setColors('sprint');
+      el.phaseLabel.textContent = COLORS.sprint.label;
+      el.phaseDesc.textContent  = COLORS.sprint.desc;
+      el.ringWrap.classList.add('sprinting');
+      flashScreen('rgba(255, 59, 48, 0.15)');
+      playBeep('sprint');
+    }
+    el.timer.textContent = fmt(timeLeft);
+    updateRing();
+  }
+
+  function start() {
+    running = true;
+    rounds = 1;
+    phase = 'sprint';
+    timeLeft = totalTime = CONFIG.SPRINT_SECONDS;
+
+    el.btn.textContent = 'STOP';
+    el.btn.classList.add('running');
+
+    el.phaseLabel.classList.add('visible');
+    el.phaseDesc.classList.add('visible');
+    el.intervals.classList.add('visible');
+    el.roundsBadge.classList.add('visible');
+    el.roundNum.textContent = '1';
+
+    el.phaseLabel.textContent = COLORS.sprint.label;
+    el.phaseDesc.textContent  = COLORS.sprint.desc;
+    el.ringWrap.classList.add('sprinting');
+    setColors('sprint');
+    flashScreen('rgba(255, 59, 48, 0.15)');
+    playBeep('sprint');
+
+    el.timer.textContent = fmt(timeLeft);
+    updateRing();
+    interval = setInterval(tick, 1000);
+  }
+
+  function stop() {
+    running = false;
+    clearInterval(interval);
+
+    phase = 'sprint';
+    timeLeft = totalTime = CONFIG.SPRINT_SECONDS;
+
+    el.btn.textContent = 'START';
+    el.btn.classList.remove('running');
+
+    el.phaseLabel.classList.remove('visible');
+    el.phaseDesc.classList.remove('visible');
+    el.intervals.classList.remove('visible');
+    el.roundsBadge.classList.remove('visible');
+    el.ringWrap.classList.remove('sprinting');
+
+    setColors('idle');
+    el.timer.textContent = fmt(CONFIG.SPRINT_SECONDS);
+
+    el.ringProg.style.strokeDasharray = CIRCUMFERENCE;
+    el.ringProg.style.strokeDashoffset = 0;
+  }
+
+  el.btn.addEventListener('click', () => {
+    if (running) stop(); else start();
+  });
+
+  // Init
+  el.chipSprint.textContent = CONFIG.SPRINT_SECONDS + 's';
+  el.chipRest.textContent   = CONFIG.REST_SECONDS + 's';
+  el.timer.textContent = fmt(CONFIG.SPRINT_SECONDS);
+  el.ringProg.style.strokeDasharray = CIRCUMFERENCE;
+  el.ringProg.style.strokeDashoffset = 0;
+  setColors('idle');
+</script>
+</body>
+</html>
