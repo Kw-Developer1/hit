@@ -5,559 +5,539 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>HIIT Run</title>
 <style>
-  /* ─── CONFIG ──────────────────────────────────────────────── */
-  /* Cambia estos valores para ajustar los tiempos */
-  /* Sprint y Rest se definen en el JS (ver arriba del script) */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,200;0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=DM+Mono:wght@300;400&display=swap');
 
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
-  :root {
-    --sprint-color: #FF3B30;
-    --sprint-glow: rgba(255, 59, 48, 0.25);
-    --rest-color: #30D158;
-    --rest-glow: rgba(48, 209, 88, 0.25);
-    --neutral-color: #0A84FF;
-    --neutral-glow: rgba(10, 132, 255, 0.20);
-    --bg: #0a0a0a;
-    --surface: #141414;
-    --border: rgba(255,255,255,0.08);
-    --text-primary: #ffffff;
-    --text-secondary: rgba(255,255,255,0.45);
-    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
-  }
+:root {
+  --bg: #080808;
+  --s1: #111111;
+  --s2: #191919;
+  --s3: #242424;
+  --b:  rgba(255,255,255,0.06);
+  --bm: rgba(255,255,255,0.11);
+  --t1: #f5f5f7;
+  --t2: rgba(245,245,247,0.52);
+  --t3: rgba(245,245,247,0.26);
+  --font: 'DM Sans', -apple-system, sans-serif;
+  --mono: 'DM Mono', monospace;
+  --acc: #0A84FF;
+  --sc:  #FF453A;
+  --rc:  #32D74B;
+  --r-sm:10px; --r-md:16px; --r-lg:22px; --r-xl:30px;
+}
 
-  html, body {
-    width: 100%; height: 100%; overflow: hidden;
-    background: var(--bg);
-    color: var(--text-primary);
-    font-family: var(--font);
-    -webkit-font-smoothing: antialiased;
-  }
+html,body { width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--t1);font-family:var(--font);-webkit-font-smoothing:antialiased; }
+body { display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;position:relative;overflow:hidden; }
 
-  body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100dvh;
-    padding: 2rem 1.5rem;
-    position: relative;
-  }
+#bg-grain {
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity:0.7;
+}
+#glow1,#glow2 {
+  position:fixed;pointer-events:none;z-index:0;border-radius:50%;
+  filter:blur(70px);transition:background 1.1s ease,opacity 1.1s ease;
+}
+#glow1 { top:-25vh;left:50%;transform:translateX(-50%);width:160vw;height:90vh;background:radial-gradient(ellipse,var(--acc) 0%,transparent 65%);opacity:0.06; }
+#glow2 { bottom:-15vh;left:50%;transform:translateX(-50%);width:100vw;height:50vh;background:radial-gradient(ellipse,var(--acc) 0%,transparent 65%);opacity:0.04; }
 
-  /* ─── AMBIENT GLOW ───────────────────────────────────────── */
-  #ambient {
-    position: fixed;
-    top: -30%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 600px;
-    height: 600px;
-    border-radius: 50%;
-    background: var(--neutral-glow);
-    filter: blur(80px);
-    transition: background 0.8s ease;
-    pointer-events: none;
-    z-index: 0;
-  }
+#pts { position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden; }
+.pt { position:absolute;border-radius:50%;background:var(--acc);opacity:0;animation:floatPt 8s ease-in infinite; }
+@keyframes floatPt {
+  0%   { transform:translateY(0) scale(1);opacity:0; }
+  12%  { opacity:0.5; }
+  88%  { opacity:0.1; }
+  100% { transform:translateY(-90vh) scale(0.15);opacity:0; }
+}
 
-  /* ─── MAIN LAYOUT ────────────────────────────────────────── */
-  #app {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0;
-    width: 100%;
-    max-width: 420px;
-  }
+#flash { position:fixed;inset:0;z-index:30;pointer-events:none;opacity:0; }
+#flash.go { animation:flashA 0.55s ease-out forwards; }
+@keyframes flashA { 0%{opacity:0.18} 100%{opacity:0} }
 
-  /* ─── HEADER ─────────────────────────────────────────────── */
-  #header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    margin-bottom: 3rem;
-  }
+#swo { position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;pointer-events:none; }
+#swl { font-size:48px;font-weight:200;letter-spacing:0.1em;text-transform:uppercase;opacity:0;transform:scale(0.65); }
+#swo.go #swl { animation:swPop 0.75s cubic-bezier(0.22,1,0.36,1) forwards; }
+@keyframes swPop {
+  0%   { transform:scale(0.65);opacity:0; }
+  38%  { transform:scale(1.06);opacity:1; }
+  65%  { transform:scale(0.97);opacity:1; }
+  100% { transform:scale(1);opacity:0; }
+}
 
-  .brand {
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-  }
+#app { position:relative;z-index:1;width:100%;max-width:430px;padding:0 1.4rem;display:flex;flex-direction:column;align-items:center; }
 
-  #rounds-badge {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 6px 14px;
-    transition: all 0.4s ease;
-    opacity: 0;
-    transform: scale(0.9);
-  }
+#topbar { width:100%;display:flex;align-items:center;justify-content:space-between;padding-bottom:2rem; }
+.brand { display:flex;flex-direction:column;gap:1px; }
+.brand-name { font-size:11px;font-weight:700;letter-spacing:0.25em;text-transform:uppercase;color:var(--t3); }
+.brand-tag  { font-size:14px;font-weight:500;color:var(--t2);letter-spacing:0.03em; }
 
-  #rounds-badge.visible {
-    opacity: 1;
-    transform: scale(1);
-  }
+#tstats { display:flex;gap:8px; }
+.tstat {
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--s1);border:1px solid var(--b);border-radius:var(--r-md);
+  padding:8px 13px;min-width:60px;transition:border-color 0.5s;
+}
+.tstat .tv { font-family:var(--mono);font-size:15px;font-weight:300;color:var(--t1);line-height:1;transition:color 0.4s; }
+.tstat .tl { font-size:9px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:var(--t3);margin-top:3px; }
 
-  #rounds-badge span {
-    color: var(--neutral-color);
-    font-weight: 600;
-    transition: color 0.5s ease;
-  }
+#ph-wrap { height:38px;display:flex;align-items:center;justify-content:center;margin-bottom:0.5rem; }
+#ph-badge {
+  display:flex;align-items:center;gap:7px;
+  opacity:0;transform:translateY(5px);
+  transition:opacity 0.5s,transform 0.5s,color 0.5s;
+}
+#ph-badge.on { opacity:1;transform:translateY(0); }
+.ph-dot { width:7px;height:7px;border-radius:50%;background:var(--acc);transition:background 0.5s; }
+#ph-badge.pls .ph-dot { animation:dotA 1.3s ease-in-out infinite; }
+@keyframes dotA { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.9);opacity:0.45} }
+#ph-text { font-size:11px;font-weight:700;letter-spacing:0.26em;text-transform:uppercase;color:var(--acc);transition:color 0.5s; }
 
-  /* ─── PHASE LABEL ────────────────────────────────────────── */
-  #phase-wrap {
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 1rem;
-  }
+#rz { position:relative;width:270px;height:270px;display:flex;align-items:center;justify-content:center;margin-bottom:1.3rem; }
+#rz.breath { animation:ringB 3.5s ease-in-out infinite; }
+@keyframes ringB { 0%,100%{filter:drop-shadow(0 0 0px transparent)} 50%{filter:drop-shadow(0 0 18px var(--acc))} }
+#rsvg { position:absolute;top:0;left:0;width:100%;height:100%;transform:rotate(-90deg); }
+.rt  { fill:none;stroke:var(--s2);stroke-width:2.5; }
+.rgt { fill:none;stroke:var(--acc);stroke-width:2.5;opacity:0.1;transition:stroke 0.6s; }
+#rp  { fill:none;stroke:var(--acc);stroke-width:2.5;stroke-linecap:round;transition:stroke-dashoffset 1s linear,stroke 0.6s; }
 
-  #phase-label {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--neutral-color);
-    transition: color 0.5s ease, opacity 0.4s ease;
-    opacity: 0;
-  }
+#rc { display:flex;flex-direction:column;align-items:center;gap:5px; }
+#tmr {
+  font-family:var(--mono);font-size:66px;font-weight:300;
+  color:var(--t1);font-variant-numeric:tabular-nums;
+  letter-spacing:-0.02em;line-height:1;user-select:none;
+}
+#tmr.pop { animation:tmrP 0.16s ease-out; }
+@keyframes tmrP { 0%{transform:scale(1.06)} 100%{transform:scale(1)} }
+#ph-sub { font-size:13px;font-weight:400;color:var(--t3);opacity:0;transition:opacity 0.4s,color 0.4s;letter-spacing:0.05em; }
+#ph-sub.on { opacity:1; }
 
-  #phase-label.visible { opacity: 1; }
+#seg-wrap { width:100%;margin-bottom:1.2rem;opacity:0;transform:translateY(7px);transition:opacity 0.6s,transform 0.6s; }
+#seg-wrap.on { opacity:1;transform:translateY(0); }
+#seg-title { font-size:9px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:var(--t3);text-align:center;margin-bottom:9px; }
+#segs { display:flex;gap:4px;justify-content:center;flex-wrap:wrap; }
+.sg { height:4px;border-radius:2px;background:var(--s3);flex:1;min-width:6px;max-width:26px;transition:background 0.4s,transform 0.3s; }
+.sg.sd { background:var(--sc); }
+.sg.rd { background:var(--rc); }
+.sg.ac { transform:scaleY(2); }
 
-  /* ─── RING + TIMER ───────────────────────────────────────── */
-  #ring-wrap {
-    position: relative;
-    width: 260px;
-    height: 260px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 2.5rem;
-  }
+#cards { display:grid;grid-template-columns:1fr 1fr;gap:9px;width:100%;margin-bottom:1.1rem;opacity:0;transform:translateY(7px);transition:opacity 0.6s 0.08s,transform 0.6s 0.08s; }
+#cards.on { opacity:1;transform:translateY(0); }
+.ic {
+  background:var(--s1);border:1px solid var(--b);border-radius:var(--r-lg);
+  padding:14px 13px;display:flex;flex-direction:column;gap:5px;
+  position:relative;overflow:hidden;transition:border-color 0.45s,background 0.45s;
+}
+.ic::after {
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--acc),transparent);
+  opacity:0;transition:opacity 0.45s;
+}
+.ic.ac { border-color:var(--acc); }
+.ic.ac::after { opacity:0.7; }
+.ic-lbl { font-size:9px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--t3);transition:color 0.45s; }
+.ic.ac .ic-lbl { color:var(--acc); }
+.ic-val { font-family:var(--mono);font-size:26px;font-weight:300;color:var(--t1);line-height:1; }
+.ic-bar { height:2px;border-radius:1px;background:var(--s3);overflow:hidden;margin-top:3px; }
+.ic-fill { height:100%;border-radius:1px;background:var(--acc);transition:width 1s linear,background 0.5s; }
 
-  #ring-svg {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    transform: rotate(-90deg);
-  }
+#brow { display:flex;gap:9px;width:100%;margin-bottom:1.2rem;opacity:0;transform:translateY(7px);transition:opacity 0.6s 0.16s,transform 0.6s 0.16s; }
+#brow.on { opacity:1;transform:translateY(0); }
+.ms { flex:1;background:var(--s1);border:1px solid var(--b);border-radius:var(--r-md);padding:11px 10px;display:flex;flex-direction:column;gap:2px; }
+.ms-v { font-family:var(--mono);font-size:19px;font-weight:300;color:var(--t1);line-height:1;transition:color 0.45s; }
+.ms-l { font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--t3); }
 
-  #ring-bg {
-    fill: none;
-    stroke: var(--surface);
-    stroke-width: 3;
-  }
+#btn {
+  width:100%;height:68px;border-radius:var(--r-xl);border:none;outline:none;
+  font-family:var(--font);font-size:17px;font-weight:600;letter-spacing:0.04em;
+  cursor:pointer;position:relative;overflow:hidden;
+  transition:transform 0.12s ease,background 0.4s,color 0.4s,border-color 0.4s;
+  background:var(--t1);color:var(--bg);
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
+#btn::before { content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.18) 0%,transparent 55%);transition:opacity 0.3s; }
+#btn:active { transform:scale(0.965); }
+#btn.run { background:var(--s2);color:var(--t2);border:1px solid var(--bm); }
+#btn.run::before { opacity:0; }
+#btn-ic { position:relative;z-index:2;pointer-events:none;width:16px;height:16px; }
+#btn-lb { position:relative;z-index:2;pointer-events:none; }
 
-  #ring-progress {
-    fill: none;
-    stroke: var(--neutral-color);
-    stroke-width: 3;
-    stroke-linecap: round;
-    transition: stroke-dashoffset 1s linear, stroke 0.5s ease;
-  }
+#sgb {
+  position:fixed;top:18px;right:18px;
+  width:38px;height:38px;border-radius:50%;
+  border:1px solid var(--b);background:var(--s1);
+  color:var(--t2);font-size:15px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background 0.2s,border-color 0.2s;z-index:50;
+  font-family:var(--font);
+}
+#sgb:hover { background:var(--s2);border-color:var(--bm); }
 
-  #timer-display {
-    font-size: 72px;
-    font-weight: 200;
-    letter-spacing: -0.03em;
-    color: var(--text-primary);
-    font-variant-numeric: tabular-nums;
-    transition: transform 0.15s ease;
-    user-select: none;
-    line-height: 1;
-  }
-
-  #timer-display.tick {
-    transform: scale(1.04);
-  }
-
-  /* ─── PHASE DESCRIPTION ──────────────────────────────────── */
-  #phase-desc {
-    font-size: 15px;
-    font-weight: 400;
-    color: var(--text-secondary);
-    letter-spacing: 0.04em;
-    height: 24px;
-    transition: opacity 0.4s ease;
-    opacity: 0;
-    margin-bottom: 3rem;
-    text-align: center;
-  }
-
-  #phase-desc.visible { opacity: 1; }
-
-  /* ─── INTERVALS DISPLAY ──────────────────────────────────── */
-  #intervals {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 3rem;
-    opacity: 0;
-    transform: translateY(8px);
-    transition: opacity 0.5s ease, transform 0.5s ease;
-  }
-
-  #intervals.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .interval-chip {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 12px 20px;
-    min-width: 100px;
-  }
-
-  .chip-val {
-    font-size: 20px;
-    font-weight: 300;
-    font-variant-numeric: tabular-nums;
-    color: var(--text-primary);
-  }
-
-  .chip-lbl {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-  }
-
-  /* ─── START / STOP BUTTON ────────────────────────────────── */
-  #main-btn {
-    width: 100%;
-    max-width: 320px;
-    height: 72px;
-    border-radius: 20px;
-    border: none;
-    font-family: var(--font);
-    font-size: 17px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    cursor: pointer;
-    transition: transform 0.12s ease, background 0.4s ease, color 0.4s ease;
-    outline: none;
-    position: relative;
-    overflow: hidden;
-    -webkit-tap-highlight-color: transparent;
-    background: rgba(255,255,255,0.95);
-    color: #0a0a0a;
-  }
-
-  #main-btn::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0);
-    transition: background 0.15s ease;
-    border-radius: inherit;
-  }
-
-  #main-btn:active {
-    transform: scale(0.96);
-  }
-
-  #main-btn:active::after {
-    background: rgba(0,0,0,0.08);
-  }
-
-  #main-btn.running {
-    background: var(--surface);
-    color: rgba(255,255,255,0.6);
-    border: 1px solid var(--border);
-  }
-
-  /* ─── TRANSITION FLASH ───────────────────────────────────── */
-  #flash {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0;
-    z-index: 10;
-  }
-
-  #flash.animate {
-    animation: flashAnim 0.4s ease-out forwards;
-  }
-
-  @keyframes flashAnim {
-    0%   { opacity: 0.18; }
-    100% { opacity: 0; }
-  }
-
-  /* ─── PULSE ANIMATION ────────────────────────────────────── */
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.015); }
-  }
-
-  #ring-wrap.sprinting {
-    animation: pulse 1.8s ease-in-out infinite;
-  }
+#sgo {
+  position:fixed;inset:0;z-index:40;
+  background:rgba(0,0,0,0.75);backdrop-filter:blur(14px);
+  opacity:0;pointer-events:none;
+  transition:opacity 0.35s ease;
+  display:flex;align-items:flex-end;justify-content:center;
+}
+#sgo.open { opacity:1;pointer-events:all; }
+#sgs {
+  width:100%;max-width:430px;
+  background:var(--s1);border:1px solid var(--bm);border-bottom:none;
+  border-radius:var(--r-xl) var(--r-xl) 0 0;padding:20px 22px 52px;
+  transform:translateY(100%);transition:transform 0.42s cubic-bezier(0.32,0.72,0,1);
+}
+#sgo.open #sgs { transform:translateY(0); }
+.s-handle { width:40px;height:4px;border-radius:2px;background:var(--bm);margin:0 auto 24px; }
+.s-ttl { font-size:20px;font-weight:500;margin-bottom:24px;color:var(--t1); }
+.s-row { display:flex;align-items:center;justify-content:space-between;padding:15px 0;border-bottom:1px solid var(--b); }
+.s-row:last-child { border-bottom:none; }
+.s-info { display:flex;flex-direction:column;gap:2px; }
+.s-name { font-size:15px;font-weight:500;color:var(--t1); }
+.s-desc { font-size:12px;color:var(--t3); }
+.stepper { display:flex;align-items:center;background:var(--s2);border:1px solid var(--bm);border-radius:var(--r-md);overflow:hidden; }
+.stb { width:38px;height:38px;background:none;border:none;color:var(--t1);font-size:20px;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;transition:background 0.15s; }
+.stb:active { background:var(--s3); }
+.stv { font-family:var(--mono);font-size:13px;color:var(--t1);min-width:44px;text-align:center; }
+.tog { width:50px;height:28px;border-radius:14px;background:var(--s3);border:1px solid var(--bm);position:relative;cursor:pointer;transition:background 0.3s; }
+.tog.on { background:var(--acc); }
+.tog-k { position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--t1);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+.tog.on .tog-k { transform:translateX(22px); }
 </style>
 </head>
 <body>
 
-<div id="ambient"></div>
+<div id="bg-grain"></div>
+<div id="glow1"></div>
+<div id="glow2"></div>
+<div id="pts"></div>
 <div id="flash"></div>
+<div id="swo"><div id="swl"></div></div>
+
+<button id="sgb" onclick="openSg()">⚙</button>
+
+<div id="sgo" onclick="sgoClick(event)">
+  <div id="sgs">
+    <div class="s-handle"></div>
+    <div class="s-ttl">Configuración</div>
+    <div class="s-row">
+      <div class="s-info"><div class="s-name">Sprint</div><div class="s-desc">Duración de carrera intensa</div></div>
+      <div class="stepper">
+        <button class="stb" onclick="adjT('s',-5)">−</button>
+        <div class="stv" id="sv-s">30s</div>
+        <button class="stb" onclick="adjT('s',5)">+</button>
+      </div>
+    </div>
+    <div class="s-row">
+      <div class="s-info"><div class="s-name">Descanso</div><div class="s-desc">Duración de recuperación</div></div>
+      <div class="stepper">
+        <button class="stb" onclick="adjT('r',-5)">−</button>
+        <div class="stv" id="sv-r">60s</div>
+        <button class="stb" onclick="adjT('r',5)">+</button>
+      </div>
+    </div>
+    <div class="s-row">
+      <div class="s-info"><div class="s-name">Rondas máximas</div><div class="s-desc">0 = infinito</div></div>
+      <div class="stepper">
+        <button class="stb" onclick="adjR(-1)">−</button>
+        <div class="stv" id="sv-mx">∞</div>
+        <button class="stb" onclick="adjR(1)">+</button>
+      </div>
+    </div>
+    <div class="s-row">
+      <div class="s-info"><div class="s-name">Sonido</div><div class="s-desc">Beep al cambiar de fase</div></div>
+      <div class="tog on" id="tg-snd" onclick="tgSnd()"><div class="tog-k"></div></div>
+    </div>
+    <div class="s-row">
+      <div class="s-info"><div class="s-name">Vibración</div><div class="s-desc">Vibrar en cambios de fase</div></div>
+      <div class="tog on" id="tg-vib" onclick="tgVib()"><div class="tog-k"></div></div>
+    </div>
+  </div>
+</div>
 
 <div id="app">
 
-  <div id="header">
-    <div class="brand">HIIT Run</div>
-    <div id="rounds-badge">Ronda <span id="round-num">1</span></div>
+  <div id="topbar">
+    <div class="brand">
+      <div class="brand-name">HIIT</div>
+      <div class="brand-tag">Treadmill</div>
+    </div>
+    <div id="tstats">
+      <div class="tstat"><div class="tv" id="el-time">0:00</div><div class="tl">Tiempo</div></div>
+      <div class="tstat"><div class="tv" id="el-kcal">0</div><div class="tl">kcal</div></div>
+    </div>
   </div>
 
-  <div id="phase-wrap">
-    <div id="phase-label">SPRINT</div>
-  </div>
+<div id="ph-badge">
+  <span class="ph-dot"></span>
+  <span id="ph-text">SPRINT</span>
+</div>
 
-  <div id="ring-wrap">
-    <svg id="ring-svg" viewBox="0 0 260 260">
-      <circle id="ring-bg" cx="130" cy="130" r="122"/>
-      <circle id="ring-progress" cx="130" cy="130" r="122"/>
+  <div id="rz">
+    <svg id="rsvg" viewBox="0 0 270 270">
+      <circle class="rt"  cx="135" cy="135" r="121"/>
+      <circle class="rgt" cx="135" cy="135" r="121" stroke-dasharray="760.3" stroke-dashoffset="0"/>
+      <circle id="rp"     cx="135" cy="135" r="121"/>
     </svg>
-    <div id="timer-display">0:30</div>
-  </div>
-
-  <div id="phase-desc">Prepárate para correr</div>
-
-  <div id="intervals">
-    <div class="interval-chip">
-      <div class="chip-val" id="chip-sprint">30s</div>
-      <div class="chip-lbl">Sprint</div>
-    </div>
-    <div class="interval-chip">
-      <div class="chip-val" id="chip-rest">60s</div>
-      <div class="chip-lbl">Descanso</div>
+    <div id="rc">
+      <div id="tmr">0:30</div>
+      <div id="ph-sub">Listo</div>
     </div>
   </div>
 
-  <button id="main-btn">START</button>
+  <div id="seg-wrap">
+    <div id="seg-title">Progreso</div>
+    <div id="segs"></div>
+  </div>
+
+  <div id="cards">
+    <div class="ic" id="ic-s">
+      <div class="ic-lbl">Sprint</div>
+      <div class="ic-val" id="ic-sv">0:30</div>
+      <div class="ic-bar"><div class="ic-fill" id="bf-s" style="background:var(--sc)"></div></div>
+    </div>
+    <div class="ic" id="ic-r">
+      <div class="ic-lbl">Descanso</div>
+      <div class="ic-val" id="ic-rv">1:00</div>
+      <div class="ic-bar"><div class="ic-fill" id="bf-r" style="background:var(--rc)"></div></div>
+    </div>
+  </div>
+
+  <div id="brow">
+    <div class="ms"><div class="ms-v" id="el-rnd">0</div><div class="ms-l">Rondas</div></div>
+    <div class="ms"><div class="ms-v" id="el-spr">0</div><div class="ms-l">Sprints</div></div>
+    <div class="ms"><div class="ms-v" id="el-fas" style="font-size:14px">—</div><div class="ms-l">Fase</div></div>
+  </div>
+
+<button id="btn" onclick="toggle()">
+  <svg id="btn-ic" viewBox="0 0 16 16" fill="currentColor">
+    <polygon id="ico-play" points="3,1 14,8 3,15"/>
+    <rect id="ico-p1" x="2"  y="1" width="4.5" height="14" rx="1.2" style="display:none"/>
+    <rect id="ico-p2" x="9.5" y="1" width="4.5" height="14" rx="1.2" style="display:none"/>
+  </svg>
+  <span id="btn-lb">Iniciar</span>
+</button>
 
 </div>
 
 <script>
-  /* ════════════════════════════════════════════════════════════
-     CONFIGURACIÓN — Cambia estos valores para ajustar tiempos
-     ════════════════════════════════════════════════════════════ */
-  const CONFIG = {
-    SPRINT_SECONDS: 30,
-    REST_SECONDS:   60,
-  };
-  /* ════════════════════════════════════════════════════════════ */
+// Definimos variables de estado fuera para que sean accesibles
+const $ = id => document.getElementById(id);
+let C = { ss:30, rs:60, maxR:0, snd:true, vib:true };
+const CIRC = 2 * Math.PI * 121;
 
-  const CIRCUMFERENCE = 2 * Math.PI * 122;
+let run = false, ph = 'sprint', tl = 0, tt = 0;
+let rnd = 0, sprints = 0, gsec = 0, kcal = 0;
+let intv = null, aCtx = null;
 
-  const el = {
-    ambient:    document.getElementById('ambient'),
-    flash:      document.getElementById('flash'),
-    phaseLabel: document.getElementById('phase-label'),
-    phaseDesc:  document.getElementById('phase-desc'),
-    ringWrap:   document.getElementById('ring-wrap'),
-    ringProg:   document.getElementById('ring-progress'),
-    timer:      document.getElementById('timer-display'),
-    btn:        document.getElementById('main-btn'),
-    roundsBadge:document.getElementById('rounds-badge'),
-    roundNum:   document.getElementById('round-num'),
-    intervals:  document.getElementById('intervals'),
-    chipSprint: document.getElementById('chip-sprint'),
-    chipRest:   document.getElementById('chip-rest'),
-  };
+const fmt = s => {
+    const m = Math.floor(s / 60), sc = s % 60;
+    return m + ':' + (sc < 10 ? '0' : '') + sc;
+};
 
-  const COLORS = {
-    sprint: {
-      accent: '#FF3B30',
-      glow:   'rgba(255, 59, 48, 0.22)',
-      label:  'SPRINT',
-      desc:   '¡Corre al máximo!',
-    },
-    rest: {
-      accent: '#30D158',
-      glow:   'rgba(48, 209, 88, 0.20)',
-      label:  'DESCANSO',
-      desc:   'Respira, camina despacio.',
-    },
-    idle: {
-      accent: '#0A84FF',
-      glow:   'rgba(10, 132, 255, 0.18)',
-    }
-  };
+// --- FUNCIONES DE CONTROL (Globales para que los onclick funcionen) ---
 
-  let running    = false;
-  let phase      = 'sprint';   // 'sprint' | 'rest'
-  let timeLeft   = CONFIG.SPRINT_SECONDS;
-  let totalTime  = CONFIG.SPRINT_SECONDS;
-  let rounds     = 0;
-  let interval   = null;
-  let audioCtx   = null;
+function toggle() { 
+    if (run) stop(); else start(); 
+}
 
-  function fmt(s) {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return m + ':' + String(sec).padStart(2, '0');
-  }
+function start() {
+    run = true;
+    rnd = 1; sprints = 1; gsec = 0; kcal = 0;
+    ph = 'sprint';
+    tl = tt = C.ss;
 
-  function updateRing() {
-    const frac = timeLeft / totalTime;
-    const offset = CIRCUMFERENCE * (1 - frac);
-    el.ringProg.style.strokeDasharray = CIRCUMFERENCE;
-    el.ringProg.style.strokeDashoffset = offset;
-  }
+    $('btn-lb').textContent = 'Detener';
+    $('ico-play').style.display = 'none';
+    $('ico-p1').style.display = '';
+    $('ico-p2').style.display = '';
+    $('btn').classList.add('run');
+    $('ph-badge').classList.add('on');
+    $('ph-sub').classList.add('on');
+    $('seg-wrap').classList.add('on');
+    $('cards').classList.add('on');
+    $('brow').classList.add('on');
 
-  function setColors(mode) {
-    const c = COLORS[mode];
-    document.documentElement.style.setProperty('--neutral-color', c.accent);
-    el.ambient.style.background = c.glow;
-    el.ringProg.style.stroke = c.accent;
-    el.roundsBadge.querySelector('span').style.color = c.accent;
-  }
+    buildSegs();
+    enterPh('sprint');
 
-  function flashScreen(color) {
-    el.flash.style.background = color;
-    el.flash.classList.remove('animate');
-    void el.flash.offsetWidth;
-    el.flash.classList.add('animate');
-  }
+    $('tmr').textContent = fmt(tl);
+    updRing();
+    updSegs();
+    $('el-rnd').textContent = '1';
+    $('el-spr').textContent = '1';
 
-  function playBeep(type) {
-    try {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      if (type === 'sprint') {
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(660, audioCtx.currentTime + 0.12);
-        gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.18);
-      } else {
-        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(330, audioCtx.currentTime + 0.18);
-        gain.gain.setValueAtTime(0.14, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.22);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.22);
-      }
-    } catch(e) {}
-  }
+    if (intv) clearInterval(intv);
+    intv = setInterval(tick, 1000);
+}
 
-  function tick() {
-    timeLeft--;
+function stop() {
+    run = false;
+    if (intv) { clearInterval(intv); intv = null; }
 
-    el.timer.classList.remove('tick');
-    void el.timer.offsetWidth;
-    el.timer.classList.add('tick');
-    el.timer.textContent = fmt(timeLeft);
-    updateRing();
+    $('btn-lb').textContent = 'Iniciar';
+    $('ico-play').style.display = '';
+    $('ico-p1').style.display = 'none';
+    $('ico-p2').style.display = 'none';
+    $('btn').classList.remove('run');
+    $('ph-badge').classList.remove('on', 'pls');
+    $('ph-sub').classList.remove('on');
+    $('rz').classList.remove('breath');
 
-    if (timeLeft <= 0) switchPhase();
-  }
+    accent('#0A84FF');
+    $('rp').style.stroke = '#0A84FF';
+    $('tmr').textContent = fmt(C.ss);
+    $('rp').style.strokeDashoffset = 0;
+    $('el-fas').textContent = '—';
+}
 
-  function switchPhase() {
-    if (phase === 'sprint') {
-      phase = 'rest';
-      timeLeft = totalTime = CONFIG.REST_SECONDS;
-      setColors('rest');
-      el.phaseLabel.textContent = COLORS.rest.label;
-      el.phaseDesc.textContent  = COLORS.rest.desc;
-      el.ringWrap.classList.remove('sprinting');
-      flashScreen('rgba(48, 209, 88, 0.15)');
-      playBeep('rest');
+function tick() {
+    gsec++;
+    $('el-time').textContent = fmt(gsec);
+    $('el-kcal').textContent = Math.floor(gsec * 0.115);
+
+    tl--;
+    if (tl < 0) tl = 0;
+    if (tl <= 3 && tl > 0) beep('c');
+
+    $('tmr').classList.remove('pop');
+    void $('tmr').offsetWidth;
+    $('tmr').classList.add('pop');
+    $('tmr').textContent = fmt(tl);
+
+    updRing();
+    updBars();
+
+    if (tl === 0) switchPh();
+}
+
+function switchPh() {
+    if (ph === 'sprint') {
+        ph = 'rest';
+        tl = tt = C.rs;
+        enterPh('rest');
     } else {
-      rounds++;
-      el.roundNum.textContent = rounds + 1;
-      phase = 'sprint';
-      timeLeft = totalTime = CONFIG.SPRINT_SECONDS;
-      setColors('sprint');
-      el.phaseLabel.textContent = COLORS.sprint.label;
-      el.phaseDesc.textContent  = COLORS.sprint.desc;
-      el.ringWrap.classList.add('sprinting');
-      flashScreen('rgba(255, 59, 48, 0.15)');
-      playBeep('sprint');
+        rnd++;
+        sprints++;
+        if (C.maxR > 0 && rnd > C.maxR) { stop(); return; }
+        ph = 'sprint';
+        tl = tt = C.ss;
+        enterPh('sprint');
+        $('el-spr').textContent = sprints;
     }
-    el.timer.textContent = fmt(timeLeft);
-    updateRing();
-  }
+    updRing();
+    updSegs();
+    $('el-rnd').textContent = rnd;
+}
 
-  function start() {
-    running = true;
-    rounds = 1;
-    phase = 'sprint';
-    timeLeft = totalTime = CONFIG.SPRINT_SECONDS;
+// --- FUNCIONES DE UI ---
 
-    el.btn.textContent = 'STOP';
-    el.btn.classList.add('running');
+function accent(hex) {
+    document.documentElement.style.setProperty('--acc', hex);
+    $('glow1').style.background = `radial-gradient(ellipse,${hex} 0%,transparent 65%)`;
+    $('glow2').style.background = `radial-gradient(ellipse,${hex} 0%,transparent 65%)`;
+}
 
-    el.phaseLabel.classList.add('visible');
-    el.phaseDesc.classList.add('visible');
-    el.intervals.classList.add('visible');
-    el.roundsBadge.classList.add('visible');
-    el.roundNum.textContent = '1';
+function updRing() {
+    $('rp').style.strokeDasharray = CIRC;
+    $('rp').style.strokeDashoffset = CIRC * (1 - tl / tt);
+}
 
-    el.phaseLabel.textContent = COLORS.sprint.label;
-    el.phaseDesc.textContent  = COLORS.sprint.desc;
-    el.ringWrap.classList.add('sprinting');
-    setColors('sprint');
-    flashScreen('rgba(255, 59, 48, 0.15)');
-    playBeep('sprint');
+function updBars() {
+    if (ph === 'sprint') {
+        $('bf-s').style.width = ((tt - tl) / tt * 100).toFixed(1) + '%';
+        $('bf-r').style.width = '0%';
+    } else {
+        $('bf-s').style.width = '100%';
+        $('bf-r').style.width = ((tt - tl) / tt * 100).toFixed(1) + '%';
+    }
+}
 
-    el.timer.textContent = fmt(timeLeft);
-    updateRing();
-    interval = setInterval(tick, 1000);
-  }
+function enterPh(p) {
+    const isSp = p === 'sprint';
+    const hex = isSp ? '#FF453A' : '#32D74B';
+    accent(hex);
+    $('rp').style.stroke = hex;
+    $('ph-text').textContent = isSp ? 'SPRINT' : 'DESCANSO';
+    $('ph-text').style.color = hex;
+    $('ph-sub').textContent = isSp ? '¡Al máximo!' : 'Recupera el ritmo';
+    $('el-fas').textContent = isSp ? 'RUN' : 'REST';
+    $('el-fas').style.color = hex;
+    $('ic-s').classList.toggle('ac', isSp);
+    $('ic-r').classList.toggle('ac', !isSp);
+    
+    // Animación de texto central
+    const sl = $('swl'), so = $('swo');
+    sl.textContent = isSp ? 'SPRINT' : 'REST'; 
+    sl.style.color = hex;
+    so.classList.remove('go'); void so.offsetWidth; so.classList.add('go');
 
-  function stop() {
-    running = false;
-    clearInterval(interval);
+    beep(isSp ? 's' : 'r');
+}
 
-    phase = 'sprint';
-    timeLeft = totalTime = CONFIG.SPRINT_SECONDS;
+function beep(t) {
+    if (!C.snd) return;
+    try {
+        if (!aCtx) aCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = aCtx.createOscillator(), g = aCtx.createGain();
+        o.connect(g); g.connect(aCtx.destination);
+        o.frequency.setValueAtTime(t === 's' ? 1047 : (t === 'r' ? 523 : 660), aCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, aCtx.currentTime + 0.2);
+        o.start(); o.stop(aCtx.currentTime + 0.2);
+    } catch (e) { }
+}
 
-    el.btn.textContent = 'START';
-    el.btn.classList.remove('running');
+function buildSegs() {
+    const el = $('segs'); el.innerHTML = '';
+    const n = C.maxR > 0 ? C.maxR : 10;
+    for (let i = 0; i < n; i++) {
+        const d = document.createElement('div'); 
+        d.className = 'sg'; d.id = 'sg' + i; 
+        el.appendChild(d);
+    }
+}
 
-    el.phaseLabel.classList.remove('visible');
-    el.phaseDesc.classList.remove('visible');
-    el.intervals.classList.remove('visible');
-    el.roundsBadge.classList.remove('visible');
-    el.ringWrap.classList.remove('sprinting');
+function updSegs() {
+    const n = C.maxR > 0 ? C.maxR : 10;
+    for (let i = 0; i < n; i++) {
+        const s = $('sg' + i); if (!s) continue;
+        if (i < rnd - 1) s.className = 'sg sd';
+        else if (i === rnd - 1) s.className = ph === 'rest' ? 'sg rd ac' : 'sg ac';
+        else s.className = 'sg';
+    }
+}
 
-    setColors('idle');
-    el.timer.textContent = fmt(CONFIG.SPRINT_SECONDS);
+// --- CONFIGURACIÓN ---
+function openSg() { if (run) return; $('sgo').classList.add('open'); }
+function closeSg() { $('sgo').classList.remove('open'); }
+function sgoClick(e) { if (e.target === $('sgo')) closeSg(); }
+function adjT(t, d) {
+    if (t === 's') { C.ss = Math.max(5, C.ss + d); $('sv-s').textContent = C.ss + 's'; $('ic-sv').textContent = fmt(C.ss); }
+    else { C.rs = Math.max(5, C.rs + d); $('sv-r').textContent = C.rs + 's'; $('ic-rv').textContent = fmt(C.rs); }
+    if (!run) $('tmr').textContent = fmt(C.ss);
+}
+function adjR(d) { C.maxR = Math.max(0, C.maxR + d); $('sv-mx').textContent = C.maxR === 0 ? '∞' : C.maxR; }
+function tgSnd() { C.snd = !C.snd; $('tg-snd').classList.toggle('on', C.snd); }
+function tgVib() { C.vib = !C.vib; $('tg-vib').classList.toggle('on', C.vib); }
 
-    el.ringProg.style.strokeDasharray = CIRCUMFERENCE;
-    el.ringProg.style.strokeDashoffset = 0;
-  }
-
-  el.btn.addEventListener('click', () => {
-    if (running) stop(); else start();
-  });
-
-  // Init
-  el.chipSprint.textContent = CONFIG.SPRINT_SECONDS + 's';
-  el.chipRest.textContent   = CONFIG.REST_SECONDS + 's';
-  el.timer.textContent = fmt(CONFIG.SPRINT_SECONDS);
-  el.ringProg.style.strokeDasharray = CIRCUMFERENCE;
-  el.ringProg.style.strokeDashoffset = 0;
-  setColors('idle');
+// --- INICIALIZACIÓN ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Partículas
+    const c = $('pts');
+    for (let i = 0; i < 20; i++) {
+        const p = document.createElement('div'); p.className = 'pt';
+        const sz = Math.random() * 3 + 1.5;
+        p.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random() * 100}%;bottom:${Math.random() * 15}%;animation-delay:${Math.random() * 8}s;`;
+        c.appendChild(p);
+    }
+    
+    // Setup inicial de anillos
+    $('rp').style.strokeDasharray = CIRC;
+    $('rp').style.strokeDashoffset = 0;
+    $('ic-sv').textContent = fmt(C.ss);
+    $('ic-rv').textContent = fmt(C.rs);
+    $('tmr').textContent = fmt(C.ss);
+});
 </script>
 </body>
 </html>
